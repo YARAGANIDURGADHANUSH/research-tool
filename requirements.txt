@@ -1,7 +1,8 @@
 fastapi
-uvicorn[standard]
+uvicorn
 python-dotenv
 pdfplumber
 pytesseract
 pdf2image
+Pillow
 groq
