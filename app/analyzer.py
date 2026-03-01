@@ -2,25 +2,22 @@ import os
 import json
 from openai import OpenAI
 
-# -------------------------------------------------
-# Validate API Key
-# -------------------------------------------------
-api_key = os.getenv("GROQ_API_KEY")
-
-if not api_key:
-    raise ValueError("GROQ_API_KEY environment variable not set")
-
-# Groq OpenAI-compatible client
-client = OpenAI(
-    api_key=api_key,
-    base_url="https://api.groq.com/openai/v1"
-)
-
 
 def analyze_text(text: str) -> dict:
 
     if not text.strip():
         return {"error": "Empty transcript"}
+
+    # ✅ Load key at runtime (important for Render)
+    api_key = os.getenv("GROQ_API_KEY")
+
+    if not api_key:
+        return {"error": "GROQ_API_KEY not found in environment"}
+
+    client = OpenAI(
+        api_key=api_key,
+        base_url="https://api.groq.com/openai/v1"
+    )
 
     prompt = f"""
 You are a professional equity research analyst.
@@ -46,61 +43,41 @@ TRANSCRIPT:
 {text[:12000]}
 """
 
-    # -------------------------------------------------
-    # CALL GROQ SAFELY
-    # -------------------------------------------------
+    # ---------------- CALL MODEL ----------------
     try:
         response = client.chat.completions.create(
             model="llama3-70b-8192",
             messages=[{"role": "user", "content": prompt}],
             temperature=0.2,
         )
-
     except Exception as e:
-        return {
-            "error": "LLM call failed",
-            "details": str(e)
-        }
+        return {"error": "LLM call failed", "details": str(e)}
 
-    # -------------------------------------------------
-    # SAFE RESPONSE EXTRACTION
-    # -------------------------------------------------
+    # ---------------- SAFE EXTRACTION ----------------
     try:
-        if not response or not response.choices:
-            return {"error": "Empty response from Groq"}
+        if not response.choices:
+            return {"error": "Empty response from model"}
 
-        message = response.choices[0].message
+        content = response.choices[0].message.content
 
-        if not message or not message.content:
-            return {"error": "No content returned by model"}
+        if not content:
+            return {"error": "Model returned empty content"}
 
-        raw_output = message.content.strip()
+        raw_output = content.strip()
 
     except Exception as e:
-        return {
-            "error": "Failed to read model response",
-            "details": str(e)
-        }
+        return {"error": "Response parsing failed", "details": str(e)}
 
-    # -------------------------------------------------
-    # SAFE JSON PARSING
-    # -------------------------------------------------
+    # ---------------- JSON PARSE ----------------
     try:
         return json.loads(raw_output)
-
     except json.JSONDecodeError:
-        # Try extracting JSON block
         try:
             start = raw_output.find("{")
             end = raw_output.rfind("}") + 1
-
-            if start != -1 and end != -1:
-                return json.loads(raw_output[start:end])
-
+            return json.loads(raw_output[start:end])
         except Exception:
-            pass
-
-        return {
-            "warning": "Model returned non-JSON output",
-            "raw_response": raw_output
-        }
+            return {
+                "warning": "Non-JSON output",
+                "raw_response": raw_output
+            }
