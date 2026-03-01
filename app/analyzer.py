@@ -46,6 +46,9 @@ TRANSCRIPT:
 {text[:12000]}
 """
 
+    # -------------------------------------------------
+    # CALL GROQ SAFELY
+    # -------------------------------------------------
     try:
         response = client.chat.completions.create(
             model="llama3-70b-8192",
@@ -53,24 +56,51 @@ TRANSCRIPT:
             temperature=0.2,
         )
 
-        raw_output = response.choices[0].message.content
-
     except Exception as e:
         return {
             "error": "LLM call failed",
             "details": str(e)
         }
 
-    # Ensure valid JSON
+    # -------------------------------------------------
+    # SAFE RESPONSE EXTRACTION
+    # -------------------------------------------------
+    try:
+        if not response or not response.choices:
+            return {"error": "Empty response from Groq"}
+
+        message = response.choices[0].message
+
+        if not message or not message.content:
+            return {"error": "No content returned by model"}
+
+        raw_output = message.content.strip()
+
+    except Exception as e:
+        return {
+            "error": "Failed to read model response",
+            "details": str(e)
+        }
+
+    # -------------------------------------------------
+    # SAFE JSON PARSING
+    # -------------------------------------------------
     try:
         return json.loads(raw_output)
-    except:
+
+    except json.JSONDecodeError:
+        # Try extracting JSON block
         try:
             start = raw_output.find("{")
             end = raw_output.rfind("}") + 1
-            return json.loads(raw_output[start:end])
-        except:
-            return {
-                "error": "Invalid JSON output",
-                "raw_response": raw_output
-            }
+
+            if start != -1 and end != -1:
+                return json.loads(raw_output[start:end])
+
+        except Exception:
+            pass
+
+        return {
+            "warning": "Model returned non-JSON output",
+            "raw_response": raw_output
+        }
