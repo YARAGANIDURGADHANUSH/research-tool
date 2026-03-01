@@ -1,193 +1,407 @@
-# 📊 Research Tool API — Management Commentary Analyzer
+# Research Tool API — Earnings Call / Management Commentary Analyzer
 
-## 📌 Overview
-An AI-powered Research Tool that extracts and analyzes management commentary from earnings call transcripts, conference calls, and business updates.
+## Overview
 
-This backend API enables users to:
-- Upload a transcript (PDF)
-- Automatically extract text
-- Generate structured investment research insights using AI
+This project implements a **minimal AI-powered research portal** designed as a **structured research tool**, not an open-ended chatbot.
 
----
+The system allows researchers and analysts to upload earnings call transcripts or management discussion documents and automatically generate **structured analyst-ready insights**.
 
-## 🚀 Features
-- ✅ PDF Upload API  
-- ✅ Automatic Text Extraction  
-- ✅ AI-Based Management Commentary Analysis  
-- ✅ Structured Analyst Output  
-- ✅ REST API built using FastAPI  
-- ✅ Swagger Documentation (`/docs`)  
-- ✅ Local LLM support via Ollama (No API cost)
+The tool converts unstructured financial transcripts into clearly organized research outputs such as:
+
+- Management tone and sentiment
+- Key positives and risks
+- Forward guidance
+- Capacity trends
+- Growth initiatives
+
+This implementation fulfills the **L2 Research Tool Assignment** requirement of building a working end-to-end research workflow.
 
 ---
 
-## 🧠 Output Generated
-The system converts raw transcripts into structured research insights:
+## Objective
 
-- Management Tone & Sentiment
-- Key Positives
-- Key Risks & Concerns
-- Growth Drivers
-- Forward Guidance
-- Operational Insights
-- Analyst Interpretation
+Financial analysts spend hours manually reviewing earnings call transcripts.  
+This tool automates the process by transforming transcripts into structured research summaries suitable for investment or business analysis.
 
-### Example Output
-```json
-{
-  "message": "Analysis complete",
-  "analysis": {
-    "sentiment": "Optimistic",
-    "positives": ["Strong growth outlook", "OSAT progress"],
-    "concerns": ["Working capital intensity"],
-    "outlook": "Positive long-term growth"
-  }
-}
+The design philosophy:
+
+- ❌ Not a chatbot
+- ✅ A focused research tool
+- ✅ Deterministic structured output
+- ✅ Analyst-usable insights
+
+---
+
+## Key Features
+
+- Upload earnings call transcripts (PDF)
+- Automatic PDF text extraction
+- AI-powered structured analysis
+- Management sentiment classification
+- Key positives & concerns extraction
+- Forward guidance identification
+- Local LLM execution (FREE — no API cost)
+- REST API via FastAPI
+- Analyst-ready JSON output
+
+---
+
+## System Architecture
+
+```
+User Uploads PDF
+        ↓
+File Storage (uploads/)
+        ↓
+Text Extraction (PDF → TXT)
+        ↓
+Local LLM Analysis (Ollama + Gemma3)
+        ↓
+Structured Research Output (JSON)
+        ↓
+Saved in outputs/
 ```
 
 ---
 
-## 🏗️ Project Structure
+## Technology Stack
+
+| Component | Technology |
+|-----------|------------|
+| Backend API | FastAPI |
+| Server | Uvicorn |
+| Language | Python 3.12 |
+| AI Runtime | Ollama |
+| Model | gemma3:4b |
+| Document Processing | PDF Text Extraction + OCR |
+| API Docs | OpenAPI / Swagger |
+| Deployment Ready | Yes |
+
+---
+
+## Why Local LLM (Ollama)?
+
+This project intentionally avoids paid APIs.
+
+Advantages:
+
+- ✅ Completely FREE
+- ✅ No OpenAI billing required
+- ✅ Runs offline
+- ✅ Evaluator-friendly
+- ✅ Works without API keys
+
+---
+
+## Project Structure
+
 ```
 research-tool/
 │
 ├── app/
-│   ├── main.py
-│   ├── routes.py
-│   ├── extractor.py
-│   ├── analyzer.py
-│   └── __init__.py
+│   ├── main.py          # FastAPI application entry
+│   ├── routes.py        # API endpoints
+│   ├── extractor.py     # PDF → text processing
+│   └── analyzer.py      # AI analysis using Ollama
 │
-├── uploads/
-├── outputs/
+├── uploads/             # Uploaded PDFs
+├── outputs/             # Extracted text + analysis results
 ├── requirements.txt
 └── README.md
 ```
 
 ---
 
-## ⚙️ Installation
+## Installation Guide
 
-### 1️⃣ Clone Project
+### Step 1 — Clone Repository
+
 ```bash
-git clone <repo-url>
+git clone https://github.com/YOUR_USERNAME/research-tool.git
 cd research-tool
 ```
 
-### 2️⃣ Create Virtual Environment
+---
+
+### Step 2 — Create Virtual Environment
+
+Windows:
+
 ```bash
 python -m venv venv
 venv\Scripts\activate
 ```
 
-### 3️⃣ Install Dependencies
+Mac/Linux:
+
+```bash
+python3 -m venv venv
+source venv/bin/activate
+```
+
+---
+
+### Step 3 — Install Dependencies
+
 ```bash
 pip install -r requirements.txt
 ```
 
 ---
 
-## 🤖 Install Local AI Model (Ollama)
+### Step 4 — Install Ollama
 
-### Install Ollama
-https://ollama.com
+Download from:
 
-### Pull Model
-```bash
-ollama pull gemma3:4b
-```
+https://ollama.com/download
 
-### Verify Installation
+Verify installation:
+
 ```bash
 ollama list
 ```
 
 ---
 
-## ▶️ Run Application
+### Step 5 — Download AI Model (ONE TIME ONLY)
+
+```bash
+ollama pull gemma3:4b
+```
+
+Model size ≈ 3GB  
+Download time depends on internet speed.
+
+---
+
+### Step 6 — Run Server
+
 ```bash
 uvicorn app.main:app --reload
 ```
 
-### Open API Documentation
+Server starts at:
+
 ```
-http://127.0.0.1:8000/docs
+http://127.0.0.1:8000
 ```
 
 ---
 
-## 📡 API Workflow
+## API Documentation
 
-### Step 1 — Upload Transcript
+Open interactive documentation:
+
+```
+http://127.0.0.1:8000/docs
+```
+
+Swagger UI allows full workflow execution without coding.
+
+---
+
+## End-to-End Workflow
+
+### 1️⃣ Upload Transcript
+
+Endpoint:
+
 ```
 POST /upload
 ```
 
-**Response**
+Upload a PDF earnings call transcript.
+
+Example Response:
+
 ```json
 {
-  "file_id": "uuid"
+  "file_id": "uuid",
+  "message": "Upload successful"
 }
 ```
 
 ---
 
-### Step 2 — Extract Text
+### 2️⃣ Extract Text
+
+Endpoint:
+
 ```
 POST /extract-text/{file_id}
 ```
 
-Extracts text from uploaded PDF.
+Converts PDF into machine-readable text.
+
+Example Response:
+
+```json
+{
+  "message": "Text extracted successfully",
+  "characters_extracted": 38088
+}
+```
 
 ---
 
-### Step 3 — Analyze Transcript
+### 3️⃣ Run Research Analysis
+
+Endpoint:
+
 ```
 POST /analyze/{file_id}
 ```
 
-Generates structured research analysis.
+Runs AI research analysis using local LLM.
 
 ---
 
-## 🔄 End-to-End Pipeline
+## Output Structure (Research Ready)
+
+Example output:
+
+```json
+{
+  "management_tone": "Optimistic",
+  "confidence_level": "High",
+  "key_positives": [
+    "Strong long-term growth roadmap",
+    "Semiconductor value chain expansion",
+    "Improved governance processes"
+  ],
+  "key_concerns": [
+    "Working capital pressure",
+    "High capex spending"
+  ],
+  "forward_guidance": "Growth expected with improving operational efficiency.",
+  "capacity_utilization_trends": "Increasing utilization with new customers.",
+  "growth_initiatives": [
+    "OSAT semiconductor initiative",
+    "High-end PCB manufacturing expansion"
+  ]
+}
 ```
-Upload PDF
-    ↓
-Extract Text
-    ↓
-AI Analysis
-    ↓
-Structured Research Output
+
+---
+
+## Research Logic Design
+
+### Management Tone Detection
+
+Derived from:
+
+- Executive language patterns
+- Risk acknowledgement
+- Forward-looking statements
+- Confidence indicators
+
+---
+
+### Hallucination Prevention
+
+The model is instructed to:
+
+- Only extract information present in transcript
+- Avoid assumptions
+- Mark missing information explicitly
+
+---
+
+### Handling Missing Sections
+
+If transcript lacks information:
+
+- Output states **"Not Mentioned"**
+- No fabricated content generated
+
+---
+
+## Evaluator Quick Start (2–3 Minutes)
+
+1. Install Ollama
+2. Run:
+
+```bash
+ollama pull gemma3:4b
 ```
 
----
+3. Install dependencies:
 
-## 🧩 Tech Stack
-- Python
-- FastAPI
-- Ollama (Local LLM)
-- PyPDF Extraction
-- Uvicorn
+```bash
+pip install -r requirements.txt
+```
 
----
+4. Start API:
 
-## 📈 Use Cases
-- Equity Research Automation
-- Earnings Call Analysis
-- Financial Document Intelligence
-- Research Analyst Productivity Tools
+```bash
+uvicorn app.main:app --reload
+```
 
----
+5. Open:
 
-## ✅ Assignment Objective
-This project demonstrates:
-- API Development
-- AI Integration
-- Document Processing Pipeline
-- Structured Financial Insight Generation
+```
+http://127.0.0.1:8000/docs
+```
+
+6. Execute:
+
+Upload → Extract → Analyze
 
 ---
 
-## 👤 Author
-**Durga Dhanush Yaragani**
+## Deployment Notes
+
+The project is deployable on:
+
+- Render
+- Railway
+- VPS
+- Local evaluation environment
+
+Free hosting limitations:
+
+- Cold start delays
+- Limited compute
+- Larger PDFs slower processing
+
+---
+
+## Limitations
+
+- CPU-based inference slower than cloud GPUs
+- Large transcripts require more processing time
+- Designed for evaluation-scale workloads
+
+---
+
+## Future Improvements
+
+- Multi-document comparison
+- Vector database retrieval (RAG)
+- Analyst dashboard UI
+- Batch processing
+- Cloud inference option
+- Financial KPI extraction
+
+---
+
+## Assignment Scope Completion
+
+| Requirement | Status |
+|-------------|--------|
+| Document Upload | ✅ |
+| Document Processing | ✅ |
+| Research Tool Execution | ✅ |
+| Structured Output | ✅ |
+| Working API | ✅ |
+| Evaluator Usability | ✅ |
+
+Quality and structured output clarity were prioritized over performance as required.
+
+---
+
+## Author
+
+Durga Dhanush Yaragini  
+AI / ML Engineering Track  
+Research Tool Implementation
