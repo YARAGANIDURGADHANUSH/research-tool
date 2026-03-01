@@ -2,9 +2,17 @@ import os
 import json
 from openai import OpenAI
 
-# Groq uses OpenAI-compatible SDK
+# -------------------------------------------------
+# Validate API Key
+# -------------------------------------------------
+api_key = os.getenv("GROQ_API_KEY")
+
+if not api_key:
+    raise ValueError("GROQ_API_KEY environment variable not set")
+
+# Groq OpenAI-compatible client
 client = OpenAI(
-    api_key=os.getenv("GROQ_API_KEY"),
+    api_key=api_key,
     base_url="https://api.groq.com/openai/v1"
 )
 
@@ -40,9 +48,9 @@ TRANSCRIPT:
 
     try:
         response = client.chat.completions.create(
-            model="llama3-8b-8192",
+            model="llama3-70b-8192",
             messages=[{"role": "user", "content": prompt}],
-            temperature=0.2
+            temperature=0.2,
         )
 
         raw_output = response.choices[0].message.content

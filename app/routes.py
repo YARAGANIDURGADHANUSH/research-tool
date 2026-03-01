@@ -1,5 +1,3 @@
-# app/routes.py
-
 from fastapi import APIRouter, UploadFile, File, HTTPException
 import shutil
 import uuid
@@ -46,7 +44,7 @@ async def upload_file(file: UploadFile = File(...)):
 
 
 # ---------------------------------------------------
-# TEXT EXTRACTION (PDF → TEXT)
+# TEXT EXTRACTION
 # ---------------------------------------------------
 @router.post("/extract-text/{file_id}")
 def extract_text(file_id: str):
@@ -66,24 +64,22 @@ def extract_text(file_id: str):
     output_path = f"{OUTPUT_DIR}/{file_id}.txt"
 
     try:
-        # NEW extractor returns TEXT
-        extracted_text = extract_text_from_pdf(input_path)
+        extract_text_from_pdf(input_path, output_path)
 
-        with open(output_path, "w", encoding="utf-8") as f:
-            f.write(extracted_text)
+        with open(output_path, "r", encoding="utf-8") as f:
+            extracted_text = f.read()
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
     return {
         "message": "Text extracted successfully",
-        "output_file": output_path,
         "characters_extracted": len(extracted_text)
     }
 
 
 # ---------------------------------------------------
-# MANAGEMENT COMMENTARY ANALYZER
+# ANALYSIS
 # ---------------------------------------------------
 @router.post("/analyze/{file_id}")
 def analyze(file_id: str):
@@ -118,6 +114,5 @@ def analyze(file_id: str):
 
     return {
         "message": "Analysis complete",
-        "analysis_file": analysis_path,
         "analysis": result
     }

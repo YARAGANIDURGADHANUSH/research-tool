@@ -1,7 +1,7 @@
 from dotenv import load_dotenv
 load_dotenv()
 
-from fastapi import FastAPI, UploadFile, File
+from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.responses import JSONResponse
 import uuid
 import os
@@ -9,6 +9,9 @@ import os
 from app.analyzer import analyze_text
 from app.extractor import extract_text_from_pdf
 
+# ---------------------------------------------------
+# APP INIT
+# ---------------------------------------------------
 app = FastAPI(title="Research Tool API")
 
 UPLOAD_DIR = "uploads"
@@ -27,16 +30,33 @@ def root():
 
 
 # ---------------------------------------------------
+# HEALTH CHECK (important for deployment platforms)
+# ---------------------------------------------------
+@app.get("/health")
+def health():
+    return {"status": "ok"}
+
+
+# ---------------------------------------------------
 # UPLOAD DOCUMENT
 # ---------------------------------------------------
 @app.post("/upload")
 async def upload_file(file: UploadFile = File(...)):
 
-    file_id = str(uuid.uuid4())
-    file_path = f"{UPLOAD_DIR}/{file_id}.pdf"
+    if not file.filename.endswith(".pdf"):
+        raise HTTPException(status_code=400, detail="Only PDF files allowed")
 
-    with open(file_path, "wb") as f:
-        f.write(await file.read())
+    file_id = str(uuid.uuid4())
+    file_path = os.path.join(UPLOAD_DIR, f"{file_id}.pdf")
+
+    try:
+        contents = await file.read()
+
+        with open(file_path, "wb") as f:
+            f.write(contents)
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
     return {
         "message": "Upload successful",
@@ -50,18 +70,18 @@ async def upload_file(file: UploadFile = File(...)):
 @app.post("/analyze/{file_id}")
 def analyze(file_id: str):
 
-    pdf_path = f"{UPLOAD_DIR}/{file_id}.pdf"
-    text_path = f"{OUTPUT_DIR}/{file_id}.txt"
+    pdf_path = os.path.join(UPLOAD_DIR, f"{file_id}.pdf")
+    text_path = os.path.join(OUTPUT_DIR, f"{file_id}.txt")
 
     if not os.path.exists(pdf_path):
-        return JSONResponse(
+        raise HTTPException(
             status_code=404,
-            content={"error": "Uploaded file not found"}
+            detail="Uploaded file not found"
         )
 
     try:
         # ---------------------------------
-        # STEP 1 — Extract only if needed
+        # STEP 1 — Extract text if needed
         # ---------------------------------
         if not os.path.exists(text_path):
 
@@ -75,18 +95,20 @@ def analyze(file_id: str):
                 cached_text = f.read()
                 char_count = len(cached_text)
 
-        # load extracted text
+        # ---------------------------------
+        # STEP 2 — Load extracted text
+        # ---------------------------------
         with open(text_path, "r", encoding="utf-8") as f:
             text = f.read()
 
         if not text.strip():
-            return JSONResponse(
+            raise HTTPException(
                 status_code=400,
-                content={"error": "No text extracted from PDF"}
+                detail="No text extracted from PDF"
             )
 
         # ---------------------------------
-        # STEP 2 — AI Analysis
+        # STEP 3 — AI Analysis
         # ---------------------------------
         result = analyze_text(text)
 
@@ -96,6 +118,9 @@ def analyze(file_id: str):
             "characters_extracted": char_count,
             "analysis": result
         }
+
+    except HTTPException:
+        raise
 
     except Exception as e:
         return JSONResponse(
