@@ -1,38 +1,29 @@
-# app/analyzer.py
-
-import ollama
+import os
 import json
+from openai import OpenAI
+
+# Groq uses OpenAI-compatible SDK
+client = OpenAI(
+    api_key=os.getenv("GROQ_API_KEY"),
+    base_url="https://api.groq.com/openai/v1"
+)
 
 
-def analyze_text(text: str):
-    """
-    Earnings Call / Management Commentary Research Tool
+def analyze_text(text: str) -> dict:
 
-    Input:
-        Extracted transcript text
-
-    Output:
-        Structured analyst-ready JSON
-    """
+    if not text.strip():
+        return {"error": "Empty transcript"}
 
     prompt = f"""
 You are a professional equity research analyst.
 
-Analyze the following earnings call transcript.
+STRICT RULES:
+- Use ONLY transcript information
+- No hallucinations
+- If missing → "Not Mentioned"
+- Return VALID JSON ONLY
 
-========================
-STRICT RULES
-========================
-- Use ONLY information present in transcript.
-- DO NOT hallucinate or assume data.
-- If information is missing, return "Not Mentioned".
-- Keep responses concise and analyst-style.
-- Output MUST be valid JSON only.
-- No explanations outside JSON.
-
-========================
-OUTPUT FORMAT (STRICT)
-========================
+OUTPUT FORMAT:
 {{
   "management_tone": "",
   "confidence_level": "",
@@ -43,32 +34,35 @@ OUTPUT FORMAT (STRICT)
   "new_growth_initiatives": []
 }}
 
-========================
-TRANSCRIPT
-========================
-{text}
+TRANSCRIPT:
+{text[:12000]}
 """
 
-    # Call local Ollama model
-    response = ollama.chat(
-        model="gemma3:4b",
-        messages=[
-            {"role": "user", "content": prompt}
-        ]
-    )
-
-    raw_output = response["message"]["content"]
-
-    # -----------------------------
-    # Ensure valid JSON output
-    # (important for assignment)
-    # -----------------------------
     try:
-        parsed = json.loads(raw_output)
-        return parsed
-    except json.JSONDecodeError:
-        # fallback if model adds extra text
+        response = client.chat.completions.create(
+            model="llama3-8b-8192",
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.2
+        )
+
+        raw_output = response.choices[0].message.content
+
+    except Exception as e:
         return {
-            "error": "Model returned non-JSON output",
-            "raw_response": raw_output
+            "error": "LLM call failed",
+            "details": str(e)
         }
+
+    # Ensure valid JSON
+    try:
+        return json.loads(raw_output)
+    except:
+        try:
+            start = raw_output.find("{")
+            end = raw_output.rfind("}") + 1
+            return json.loads(raw_output[start:end])
+        except:
+            return {
+                "error": "Invalid JSON output",
+                "raw_response": raw_output
+            }

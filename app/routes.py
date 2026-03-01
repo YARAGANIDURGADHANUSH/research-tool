@@ -1,3 +1,5 @@
+# app/routes.py
+
 from fastapi import APIRouter, UploadFile, File, HTTPException
 import shutil
 import uuid
@@ -15,19 +17,21 @@ OUTPUT_DIR = "outputs"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
-# -------------------------
-# HEALTH
-# -------------------------
+
+# ---------------------------------------------------
+# HEALTH CHECK
+# ---------------------------------------------------
 @router.get("/health")
 def health():
     return {"status": "ok"}
 
 
-# -------------------------
-# UPLOAD
-# -------------------------
+# ---------------------------------------------------
+# FILE UPLOAD
+# ---------------------------------------------------
 @router.post("/upload")
 async def upload_file(file: UploadFile = File(...)):
+
     file_id = str(uuid.uuid4())
     file_path = f"{UPLOAD_DIR}/{file_id}_{file.filename}"
 
@@ -41,9 +45,9 @@ async def upload_file(file: UploadFile = File(...)):
     }
 
 
-# -------------------------
-# EXTRACT TEXT
-# -------------------------
+# ---------------------------------------------------
+# TEXT EXTRACTION (PDF → TEXT)
+# ---------------------------------------------------
 @router.post("/extract-text/{file_id}")
 def extract_text(file_id: str):
 
@@ -61,18 +65,26 @@ def extract_text(file_id: str):
     input_path = f"{UPLOAD_DIR}/{target_file}"
     output_path = f"{OUTPUT_DIR}/{file_id}.txt"
 
-    char_count = extract_text_from_pdf(input_path, output_path)
+    try:
+        # NEW extractor returns TEXT
+        extracted_text = extract_text_from_pdf(input_path)
+
+        with open(output_path, "w", encoding="utf-8") as f:
+            f.write(extracted_text)
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
     return {
         "message": "Text extracted successfully",
         "output_file": output_path,
-        "characters_extracted": char_count
+        "characters_extracted": len(extracted_text)
     }
 
 
-# -------------------------
-# ANALYZE
-# -------------------------
+# ---------------------------------------------------
+# MANAGEMENT COMMENTARY ANALYZER
+# ---------------------------------------------------
 @router.post("/analyze/{file_id}")
 def analyze(file_id: str):
 
@@ -84,10 +96,20 @@ def analyze(file_id: str):
             detail="Run /extract-text first"
         )
 
-    with open(text_path, "r", encoding="utf-8") as f:
-        transcript = f.read()
+    try:
+        with open(text_path, "r", encoding="utf-8") as f:
+            transcript = f.read()
 
-    result = analyze_text(transcript)
+        if not transcript.strip():
+            raise HTTPException(
+                status_code=400,
+                detail="Extracted transcript is empty"
+            )
+
+        result = analyze_text(transcript)
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
     analysis_path = f"{OUTPUT_DIR}/{file_id}_analysis.json"
 
