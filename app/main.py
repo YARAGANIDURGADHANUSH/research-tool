@@ -168,3 +168,27 @@ async def analyze(file_id: str):
             }
         )
     
+         # ---------------------------------------------------
+# DOWNLOAD ANALYST REPORT
+# ---------------------------------------------------
+@app.get("/download/{file_id}")
+def download_report(file_id: str):
+
+    report_path = os.path.join(
+        OUTPUT_DIR,
+        f"{file_id}_report.txt"
+    )
+
+    # Check if report exists
+    if not os.path.exists(report_path):
+        raise HTTPException(
+            status_code=404,
+            detail="Report not found"
+        )
+
+    # Return downloadable file
+    return FileResponse(
+        path=report_path,
+        media_type="text/plain",
+        filename=f"{file_id}_analysis_report.txt"
+    )
