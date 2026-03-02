@@ -1,4 +1,4 @@
-# 📊 Research Tool API — Earnings Call Analyzer
+# Research Tool API — Earnings Call Analyzer
 
 AI-powered **FastAPI Research Tool** that converts Earnings Call transcripts into structured analyst-ready insights using Large Language Models (LLMs).
 
@@ -6,7 +6,7 @@ Built as part of an **AI Engineering / Research Tool implementation**, demonstra
 
 ---
 
-## 🚀 Overview
+## Overview
 
 Financial analysts spend significant time reviewing earnings call transcripts manually.  
 This tool automates the workflow by transforming unstructured PDFs into structured research insights.
@@ -21,19 +21,19 @@ The system provides:
 
 ---
 
-## 🧠 Key Features
+## Key Features
 
-- 📄 Upload earnings call PDFs
-- 🔎 Automatic text extraction
-- 🤖 LLM-powered analysis
-- 📊 Structured research outputs
-- ⚡ FastAPI REST API
-- 📘 Auto-generated Swagger documentation
-- ☁️ Deployment-ready backend
+-  Upload earnings call PDFs
+-  Automatic text extraction
+-  LLM-powered analysis
+-  Structured research outputs
+-  FastAPI REST API
+-  Auto-generated Swagger documentation
+-  Deployment-ready backend
 
 ---
 
-## 🏗️ Tech Stack
+## Tech Stack
 
 | Layer | Technology |
 |------|------------|
@@ -47,7 +47,7 @@ The system provides:
 
 ---
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 research-tool/
@@ -65,7 +65,7 @@ research-tool/
 
 ---
 
-## ⚙️ Local Setup
+## Local Setup
 
 ### 1. Clone Repository
 ```
@@ -105,10 +105,10 @@ http://127.0.0.1:8000/docs
 
 ## 📡 API Workflow
 
-1️⃣ Upload Earnings Call PDF  
-2️⃣ Text Extraction  
-3️⃣ LLM Analysis  
-4️⃣ Structured JSON Insights
+1️. Upload Earnings Call PDF  
+2️. Text Extraction  
+3️. LLM Analysis  
+4️. Structured JSON Insights
 
 Example Response:
 
@@ -123,7 +123,7 @@ Example Response:
 
 ---
 
-## 🎯 Skills Demonstrated
+## Skills Demonstrated
 
 - FastAPI backend development
 - REST API design
@@ -135,7 +135,7 @@ Example Response:
 
 ---
 
-## 🔮 Future Improvements
+## Future Improvements
 
 - Multi-document comparison
 - RAG integration
