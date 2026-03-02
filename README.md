@@ -103,7 +103,7 @@ http://127.0.0.1:8000/docs
 
 ---
 
-## 📡 API Workflow
+## API Workflow
 
 1️. Upload Earnings Call PDF  
 2️. Text Extraction  
@@ -144,7 +144,7 @@ Example Response:
 
 ---
 
-## 👨‍💻 Author
+## Author
 
 **Durga Dhanush Yaragani**  
 Cloud & AI / ML Engineering Track
