@@ -149,7 +149,7 @@ async def analyze(file_id: str):
 
 
 # ---------------------------------------------------
-# DOWNLOAD ANALYST REPORT  ✅ (TOP LEVEL ROUTE)
+# DOWNLOAD ANALYST REPORT
 # ---------------------------------------------------
 @app.get("/download/{file_id}")
 def download_report(file_id: str):
