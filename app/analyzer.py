@@ -1,24 +1,84 @@
-def extract_text_from_pdf(pdf_path: str, output_path: str) -> int:
-    """
-    Ultra-light extraction for cloud free tier.
-    Reads only small portion of file safely.
-    """
+import os
+import json
+from openai import OpenAI
 
-    text = ""
 
-    # ✅ Read raw bytes safely (no heavy parsing)
-    with open(pdf_path, "rb") as f:
-        raw = f.read(50000)  # first 50 KB only
-
-    try:
-        text = raw.decode("latin-1", errors="ignore")
-    except Exception:
-        text = "Unable to decode PDF text."
+def analyze_text(text: str) -> dict:
 
     if not text.strip():
-        text = "No readable text found."
+        return {"error": "Empty transcript"}
 
-    with open(output_path, "w", encoding="utf-8") as f:
-        f.write(text)
+    # Load API key at runtime (Render-safe)
+    api_key = os.getenv("GROQ_API_KEY")
 
-    return len(text)
+    if not api_key:
+        return {"error": "GROQ_API_KEY not set"}
+
+    client = OpenAI(
+        api_key=api_key,
+        base_url="https://api.groq.com/openai/v1"
+    )
+
+    prompt = f"""
+You are a professional equity research analyst.
+
+STRICT RULES:
+- Use ONLY transcript information
+- No hallucinations
+- If missing → "Not Mentioned"
+- Return VALID JSON ONLY
+
+OUTPUT FORMAT:
+{{
+  "management_tone": "",
+  "confidence_level": "",
+  "key_positives": [],
+  "key_concerns": [],
+  "forward_guidance": "",
+  "capacity_utilization_trends": "",
+  "new_growth_initiatives": []
+}}
+
+TRANSCRIPT:
+{text[:3000]}
+"""
+
+    # ---- CALL GROQ ----
+    try:
+        response = client.chat.completions.create(
+            model="llama3-70b-8192",
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.2,
+        )
+    except Exception as e:
+        return {"error": "LLM call failed", "details": str(e)}
+
+    # ---- SAFE RESPONSE EXTRACTION ----
+    try:
+        if not response.choices:
+            return {"error": "Empty model response"}
+
+        content = response.choices[0].message.content
+
+        if not content:
+            return {"error": "Model returned empty content"}
+
+        raw_output = content.strip()
+
+    except Exception as e:
+        return {"error": "Response parsing failed", "details": str(e)}
+
+    # ---- SAFE JSON PARSE ----
+    try:
+        return json.loads(raw_output)
+
+    except json.JSONDecodeError:
+        try:
+            start = raw_output.find("{")
+            end = raw_output.rfind("}") + 1
+            return json.loads(raw_output[start:end])
+        except Exception:
+            return {
+                "warning": "Non-JSON output",
+                "raw_response": raw_output
+            }

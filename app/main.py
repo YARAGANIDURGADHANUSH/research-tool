@@ -3,16 +3,29 @@ load_dotenv()
 
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.responses import JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
+
 import uuid
 import os
+import shutil
 
 from app.analyzer import analyze_text
 from app.extractor import extract_text_from_pdf
+
 
 # ---------------------------------------------------
 # APP INIT
 # ---------------------------------------------------
 app = FastAPI(title="Research Tool API")
+
+# ✅ CORS (required for Swagger + browser)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 UPLOAD_DIR = "uploads"
 OUTPUT_DIR = "outputs"
@@ -30,7 +43,7 @@ def root():
 
 
 # ---------------------------------------------------
-# HEALTH CHECK (important for deployment platforms)
+# HEALTH CHECK
 # ---------------------------------------------------
 @app.get("/health")
 def health():
@@ -38,22 +51,21 @@ def health():
 
 
 # ---------------------------------------------------
-# UPLOAD DOCUMENT
+# UPLOAD DOCUMENT (memory-safe)
 # ---------------------------------------------------
 @app.post("/upload")
 async def upload_file(file: UploadFile = File(...)):
 
-    if not file.filename.endswith(".pdf"):
+    if not file.filename.lower().endswith(".pdf"):
         raise HTTPException(status_code=400, detail="Only PDF files allowed")
 
     file_id = str(uuid.uuid4())
     file_path = os.path.join(UPLOAD_DIR, f"{file_id}.pdf")
 
     try:
-        contents = await file.read()
-
-        with open(file_path, "wb") as f:
-            f.write(contents)
+        # ✅ stream file instead of loading into RAM
+        with open(file_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -65,10 +77,10 @@ async def upload_file(file: UploadFile = File(...)):
 
 
 # ---------------------------------------------------
-# ANALYZE DOCUMENT (FULL PIPELINE)
+# ANALYZE DOCUMENT
 # ---------------------------------------------------
 @app.post("/analyze/{file_id}")
-def analyze(file_id: str):
+async def analyze(file_id: str):
 
     pdf_path = os.path.join(UPLOAD_DIR, f"{file_id}.pdf")
     text_path = os.path.join(OUTPUT_DIR, f"{file_id}.txt")
@@ -80,24 +92,15 @@ def analyze(file_id: str):
         )
 
     try:
-        # ---------------------------------
-        # STEP 1 — Extract text if needed
-        # ---------------------------------
+        # STEP 1 — Extract text
         if not os.path.exists(text_path):
-
-            char_count = extract_text_from_pdf(
-                pdf_path,
-                text_path
-            )
-
+            char_count = extract_text_from_pdf(pdf_path, text_path)
         else:
             with open(text_path, "r", encoding="utf-8") as f:
                 cached_text = f.read()
                 char_count = len(cached_text)
 
-        # ---------------------------------
-        # STEP 2 — Load extracted text
-        # ---------------------------------
+        # STEP 2 — Load text
         with open(text_path, "r", encoding="utf-8") as f:
             text = f.read()
 
@@ -107,9 +110,7 @@ def analyze(file_id: str):
                 detail="No text extracted from PDF"
             )
 
-        # ---------------------------------
         # STEP 3 — AI Analysis
-        # ---------------------------------
         result = analyze_text(text)
 
         return {
