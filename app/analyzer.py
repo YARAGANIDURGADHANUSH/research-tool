@@ -1,33 +1,23 @@
-import pdfplumber
-import pytesseract
-from pdf2image import convert_from_path
-from PIL import Image
-
-
 def extract_text_from_pdf(pdf_path: str, output_path: str) -> int:
+    """
+    Ultra-light extraction for cloud free tier.
+    Reads only small portion of file safely.
+    """
+
     text = ""
 
-    # -------- TRY NORMAL PDF TEXT --------
+    # ✅ Read raw bytes safely (no heavy parsing)
+    with open(pdf_path, "rb") as f:
+        raw = f.read(50000)  # first 50 KB only
+
     try:
-        with pdfplumber.open(pdf_path) as pdf:
-            for page in pdf.pages:
-                page_text = page.extract_text()
-                if page_text:
-                    text += page_text + "\n"
-    except Exception as e:
-        print("pdfplumber failed:", e)
+        text = raw.decode("latin-1", errors="ignore")
+    except Exception:
+        text = "Unable to decode PDF text."
 
-    # -------- OCR FALLBACK --------
     if not text.strip():
-        try:
-            images = convert_from_path(pdf_path)
+        text = "No readable text found."
 
-            for img in images:
-                text += pytesseract.image_to_string(img)
-        except Exception as e:
-            print("OCR failed:", e)
-
-    # -------- SAVE OUTPUT --------
     with open(output_path, "w", encoding="utf-8") as f:
         f.write(text)
 
