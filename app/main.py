@@ -19,7 +19,6 @@ from app.extractor import extract_text_from_pdf
 # ---------------------------------------------------
 app = FastAPI(title="Research Tool API")
 
-# ✅ CORS (Swagger + browser access)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -44,7 +43,7 @@ def root():
 
 
 # ---------------------------------------------------
-# HEALTH CHECK (Render requires this)
+# HEALTH CHECK
 # ---------------------------------------------------
 @app.get("/health")
 def health():
@@ -52,7 +51,7 @@ def health():
 
 
 # ---------------------------------------------------
-# UPLOAD DOCUMENT (memory-safe streaming)
+# UPLOAD DOCUMENT
 # ---------------------------------------------------
 @app.post("/upload")
 async def upload_file(file: UploadFile = File(...)):
@@ -64,7 +63,7 @@ async def upload_file(file: UploadFile = File(...)):
     file_path = os.path.join(UPLOAD_DIR, f"{file_id}.pdf")
 
     try:
-        # ✅ stream upload (prevents memory crash)
+        # memory-safe streaming upload
         with open(file_path, "wb") as buffer:
             shutil.copyfileobj(file.file, buffer)
 
@@ -87,15 +86,10 @@ async def analyze(file_id: str):
     text_path = os.path.join(OUTPUT_DIR, f"{file_id}.txt")
 
     if not os.path.exists(pdf_path):
-        raise HTTPException(
-            status_code=404,
-            detail="Uploaded file not found"
-        )
+        raise HTTPException(status_code=404, detail="Uploaded file not found")
 
     try:
-        # ---------------------------------
-        # STEP 1 — Extract text (cached)
-        # ---------------------------------
+        # STEP 1 — Extract text
         if not os.path.exists(text_path):
             char_count = extract_text_from_pdf(pdf_path, text_path)
         else:
@@ -103,30 +97,18 @@ async def analyze(file_id: str):
                 cached_text = f.read()
                 char_count = len(cached_text)
 
-        # ---------------------------------
-        # STEP 2 — Load extracted text
-        # ---------------------------------
+        # STEP 2 — Load text
         with open(text_path, "r", encoding="utf-8") as f:
             text = f.read()
 
         if not text.strip():
-            raise HTTPException(
-                status_code=400,
-                detail="No text extracted from PDF"
-            )
+            raise HTTPException(status_code=400, detail="No text extracted")
 
-        # ---------------------------------
         # STEP 3 — AI Analysis
-        # ---------------------------------
         result = analyze_text(text)
 
-        # ---------------------------------
         # STEP 4 — Save analyst report
-        # ---------------------------------
-        report_path = os.path.join(
-            OUTPUT_DIR,
-            f"{file_id}_report.txt"
-        )
+        report_path = os.path.join(OUTPUT_DIR, f"{file_id}_report.txt")
 
         with open(report_path, "w", encoding="utf-8") as f:
             f.write("RESEARCH ANALYSIS REPORT\n")
@@ -146,9 +128,6 @@ async def analyze(file_id: str):
 
                 f.write("\n")
 
-        # ---------------------------------
-        # RESPONSE
-        # ---------------------------------
         return {
             "message": "Analysis complete",
             "file_id": file_id,
@@ -167,9 +146,10 @@ async def analyze(file_id: str):
                 "details": str(e)
             }
         )
-    
-         # ---------------------------------------------------
-# DOWNLOAD ANALYST REPORT
+
+
+# ---------------------------------------------------
+# DOWNLOAD ANALYST REPORT  ✅ (TOP LEVEL ROUTE)
 # ---------------------------------------------------
 @app.get("/download/{file_id}")
 def download_report(file_id: str):
@@ -179,14 +159,12 @@ def download_report(file_id: str):
         f"{file_id}_report.txt"
     )
 
-    # Check if report exists
     if not os.path.exists(report_path):
         raise HTTPException(
             status_code=404,
             detail="Report not found"
         )
 
-    # Return downloadable file
     return FileResponse(
         path=report_path,
         media_type="text/plain",
